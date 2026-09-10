@@ -1,0 +1,5 @@
+# --- core ---
+numpy>=1.24          # trace vectors, window-distance math
+scikit-learn>=1.3    # the RandomForest traffic-analysis attacker
+matplotlib>=3.8      # evaluation figures
+pandas>=2.0          # metrics table / CSV
