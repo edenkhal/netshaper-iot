@@ -1,5 +1,5 @@
 """
-run_experiment.py -- Step B: shape every trace with every shaper.
+run_experiment.py: turns raw traces into shaped traces and computes the DP params along way.
 
 Pipeline:
   1. Load the trace dataset.
@@ -13,25 +13,27 @@ Pipeline:
 Run:  python run_experiment.py
 """
 
-import json                        # dataset I/O
+import json                        # reads the traces file and the shaped results. 
 import random                      # pair sampling for Delta_W estimation
 import numpy as np                 # window-distance computation
 from config import (TRACES_PATH, RESULTS_DIR, SHAPED_PATH, SHAPER_LEVELS,
                     T_BINS, W_INTERVALS, SEED)
 from shapers import SHAPERS
 
-_rng = random.Random(SEED + 1)     # separate stream from trace generation
+_rng = random.Random(SEED + 1)     # praivate random generator - independant from the one that made the traces
+# TODO if changing into real data so maybe the line above needs to be changed
 
 
 def window_repr(bins: list[int]) -> np.ndarray:
     """
-    The paper's stream representation for the neighboring definition:
+    reshape a trace into per-interval totals.
+    according to the paper's stream representation for the neighboring definition:
     total bytes per interval of length T (their S_{tw,W} at granularity T).
     """
-    arr = np.array(bins, dtype=float)
-    n_int = len(arr) // T_BINS
-    # Sum bytes inside each T-interval -> the burst-length sequence
-    return arr[:n_int * T_BINS].reshape(n_int, T_BINS).sum(axis=1)
+    byte_arr = np.array(bins, dtype=float)
+    num_intervals = len(byte_arr) // T_BINS
+    # Sum bytes inside each T-interval is the burst-length sequence
+    return byte_arr[:num_intervals * T_BINS].reshape(num_intervals, T_BINS).sum(axis=1)
 
 
 def max_window_distance(a: list[int], b: list[int]) -> float:
@@ -39,37 +41,37 @@ def max_window_distance(a: list[int], b: list[int]) -> float:
     The paper's Definition 1 distance: the max, over all windows of W
     intervals, of the L1 distance between the two burst sequences.
     """
-    ra, rb = window_repr(a), window_repr(b)
-    diff = np.abs(ra - rb)
+    repr_a, repr_b = window_repr(a), window_repr(b)
+    diff = np.abs(repr_a - repr_b)
     k = W_INTERVALS                            # window length in intervals
     # Slide a window of k intervals and take the max L1 sum
     return max(float(diff[i:i + k].sum()) for i in range(len(diff) - k + 1))
 
 
-def estimate_delta_w(traces: list[dict], n_pairs: int = 1500) -> float:
+def estimate_delta_w(traces: list[dict], num_pairs: int = 1500) -> float:
     """
     Estimate Delta_W as the 99th percentile of pairwise window distances
     over sampled trace pairs -- the paper's own estimation approach.
     """
     dists = []
-    for _ in range(n_pairs):
-        a, b = _rng.sample(traces, 2)          # random pair from the set
-        dists.append(max_window_distance(a["bins"], b["bins"]))
+    for _ in range(num_pairs):
+        trace_a, trace_b = _rng.sample(traces, 2)          # random pair from the set
+        dists.append(max_window_distance(trace_a["bins"], trace_b["bins"]))
     return float(np.percentile(dists, 99))
 
 
 def main():
     # Load the dataset produced by make_traces.py
     dataset = json.loads(TRACES_PATH.read_text(encoding="utf-8"))
-    labels = sorted({d["label"] for d in dataset})
+    labels = sorted({trace["label"] for trace in dataset})
 
-    # ---- dataset_stats: everything the shapers need, computed once ----
-    peak_bin = max(max(d["bins"]) for d in dataset)            # for CR
+    # dataset_stats: everything the shapers need, computed once 
+    peak_bin = max(max(trace["bins"]) for trace in dataset)            # for CR
     delta_w_global = estimate_delta_w(dataset)                 # for shaper2
     # Per-class Delta_W: same recipe restricted to intra-class pairs (shaper3)
     delta_w_per_class = {
-        lab: estimate_delta_w([d for d in dataset if d["label"] == lab],
-                              n_pairs=400)
+        lab: estimate_delta_w([trace for trace in dataset if trace["label"] == lab],
+                              num_pairs=400)
         for lab in labels
     }
     stats = {"peak_bin": peak_bin, "delta_w_global": delta_w_global,
@@ -82,11 +84,11 @@ def main():
     out = {"stats": stats, "runs": {}}
     for shaper_name in SHAPER_LEVELS:
         shaped_set = []
-        for d in dataset:
-            res = SHAPERS[shaper_name](d["bins"], d["label"], stats)
+        for trace in dataset:
+            shaped = SHAPERS[shaper_name](trace["bins"], trace["label"], stats)
             # Keep the label + everything the evaluation needs
-            shaped_set.append({"label": d["label"],
-                               "orig_bytes": sum(d["bins"]), **res})
+            shaped_set.append({"label": trace["label"],
+                               "orig_bytes": sum(trace["bins"]), **shaped})
         out["runs"][shaper_name] = shaped_set
         # Progress line with the headline overheads for a quick sanity read
         total_dummy = sum(r["dummy_bytes"] for r in shaped_set)

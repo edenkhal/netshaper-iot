@@ -14,10 +14,28 @@ standard strong baseline for traffic analysis. This is a declared
 simplification (report it in limitations): if the RF already fails, deep
 models on this data volume would not do better, but stating the substitution
 honestly matters.
+
+# --- Why RandomForest and not a TCN/CNN (as in the paper)? ---
+# 1. Data size: we have 200 traces. Deep temporal models (TCN) need
+#    thousands+ of samples or they overfit -- on this dataset a TCN would
+#    likely score WORSE, not better. The paper trained on far more captured data.
+# 2. Logic of the claim: our goal is to show the defense makes the attacker
+#    FAIL. If a strong standard baseline (RF) already drops to chance on shaped
+#    traffic, that is good evidence the defense works -- a heavier model would
+#    not change that conclusion.
+# 3. Cost: RF runs in seconds, no GPU/tuning, so we spend our effort on the
+#    actual contribution (per-class DP), not on network engineering.
+# Limitation (report this): RF does not learn temporal dependencies on its own
+# -- it only sees the hand-crafted features we feed it. A TCN attacker might
+# catch subtle inter-burst timing patterns our features miss, so our privacy
+# numbers are an optimistic upper bound against a more sophisticated adversary.
+# Future work: compare against a TCN attacker on a larger captured dataset.
+
+
 """
 
 import numpy as np                                  # feature matrices
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier  # the adversary predictor - see above for why we use this instead of a TCN 
 from sklearn.model_selection import train_test_split
 from config import SEED
 

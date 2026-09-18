@@ -1,5 +1,6 @@
 """
-shaper2_netshaper.py -- Shaper 2: NetShaper's DP shaping, faithfully simulated.
+shaper2_netshaper.py: NetShaper's DP shaping, faithfully simulated.
+referred also as shaper_dp_global
 
 This reproduces the mechanism of Sec 3 of the paper (Sabzi et al., USENIX
 Security 2024), at the granularity their own simulator uses:

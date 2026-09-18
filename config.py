@@ -1,5 +1,6 @@
+# TODO: Change the desc a bit
 """
-config.py -- All project settings in one place.
+config.py:  All project settings in one place.
 
 Time model: traffic is represented as bytes-per-bin over fixed-length bins,
 exactly like the NetShaper artifact's simulator, which "transforms an
@@ -9,18 +10,18 @@ within fixed-length intervals" (Sabzi et al., USENIX Security 2024, Sec 5).
 
 from pathlib import Path     # OS-independent paths
 
-# ---------- Paths ----------
+#################################### Paths ####################################
 BASE_DIR = Path(__file__).parent
 TRACES_PATH = BASE_DIR / "traces.json"          # the synthetic IoT trace dataset
 RESULTS_DIR = BASE_DIR / "results"
 SHAPED_PATH = RESULTS_DIR / "shaped.json"       # shaped traces + overhead metrics
 METRICS_PATH = RESULTS_DIR / "metrics.csv"      # summary table
 
-# ---------- Time model ----------
+#################################### Time model ####################################
 BIN_MS = 100          # one bin = 100 ms of traffic
 TRACE_BINS = 60       # each trace covers 60 bins = 6 seconds
 
-# ---------- NetShaper parameters (paper Sec 3) ----------
+#################################### NetShaper parameters (paper Sec 3) ####################################
 # T: the DP shaping interval, in bins. The paper shapes at fixed intervals T;
 # we use 5 bins = 500 ms (the paper used 10ms-1s depending on the app).
 T_BINS = 5
@@ -32,10 +33,10 @@ W_INTERVALS = 4
 EPSILON_T = 1.0
 DELTA_T = 1e-6
 
-# ---------- Dataset parameters ----------
+#################################### Dataset parameters ####################################
 N_TRACES_PER_EVENT = 40   # traces per device-event class (5 classes -> 200 traces)
 SEED = 42                 # global seed: the experiment must be reproducible
 
-# ---------- Shaper order in the experiment ----------
+#################################### Shaper order in the experiment ####################################
 # Must match the keys of the SHAPERS dict (shapers/__init__.py)
-SHAPER_LEVELS = ["shaper0", "shaper1", "shaper2", "shaper3"]
+SHAPER_LEVELS = ["shaper_none", "shaper_const_rate", "shaper_dp_global", "shaper_dp_per_class"]

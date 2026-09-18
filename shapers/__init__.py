@@ -27,15 +27,15 @@ Grounding map (Sabzi et al., USENIX Security 2024):
 Standalone check:  python -m shapers --smoke-test
 """
 
-from .shaper0_none import shape as shaper0        # no shaping (Base)
-from .shaper1_constant import shape as shaper1    # constant-rate (CR)
-from .shaper2_netshaper import shape as shaper2   # NetShaper DP shaping
-from .shaper3_adaptive import shape as shaper3    # our per-class adaptive DP
+from .shaper0_none import shape as shaper0_none        # no shaping (Base)
+from .shaper1_const_rate import shape as shaper1_const_rate   # constant rate (CR)
+from .shaper2_netshaper import shape as shaper2_netshaper   # NetShaper DP shaping (global DP)
+from .shaper3_adaptive import shape as shaper3_dp_per_class    # our per class adaptive DP
 
-# Central registry: run_experiment.py iterates over this
+# shapers registry: run_experiment.py iterates over this
 SHAPERS = {
-    "shaper0": shaper0,
-    "shaper1": shaper1,
-    "shaper2": shaper2,
-    "shaper3": shaper3,
+    "shaper_none": shaper0_none,
+    "shaper_const_rate1": shaper1_const_rate ,
+    "shaper_dp_global": shaper2_netshaper,
+    "shaper_dp_per_class": shaper3_dp_per_class,
 }

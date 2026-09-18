@@ -1,59 +1,82 @@
-"""
-evaluate.py -- Step C: the evaluation. Fully automatic (no manual scoring).
-
-For each shaper:
-  privacy  = attack accuracy of a classifier trained on that shaper's output
-             (lower = better; chance = 1/#classes = 0.20 here)
-  costs    = bandwidth overhead (dummy bytes / original bytes),
-             mean latency (ms), dropped bytes (TTL flushes)
-
-Outputs: metrics.csv + three figures, including the project's headline
-figure -- attack accuracy vs. bandwidth overhead, one point per shaper.
-This mirrors the paper's own evaluation axes: classifier accuracy
-(their Fig 5), bandwidth overhead and latency (their Figs 8-9).
-
-Run:  python evaluate.py
-"""
+###############################################################################
+# evaluate.py           //TODO: REMOVE(STEP C)                                #
+#                                                                             #
+# For each shaper:                                                            #
+# privacy  = attack accuracy of a classifier trained on that shaper's output  #
+#            (lower = better; chance = 1/#classes = 0.20 here)                #
+# costs    = bandwidth overhead (dummy bytes / original bytes),               #
+#            mean latency (ms), dropped bytes (TTL flushes)                   #
+#                                                                             #
+# Outputs: metrics.csv + three figures, including the project's headline      #
+# figure -- attack accuracy vs. bandwidth overhead, one point per shaper.     #
+# This mirrors the paper's own evaluation axes: classifier accuracy           #
+# (see Fig 5), bandwidth overhead and latency (see Figs 8-9).                 #
+#                                                                             #
+# cmd:  python evaluate.py                                                    #
+###############################################################################
 
 import json
-import numpy as np
 import pandas as pd
 import matplotlib
-matplotlib.use("Agg")              # headless backend
+matplotlib.use("Agg")             # prevent plot win from poppin up just saves it
 import matplotlib.pyplot as plt
 from config import SHAPED_PATH, METRICS_PATH, RESULTS_DIR, SHAPER_LEVELS
 from attacker import attack_accuracy
 
-# Readable names for tables and figures
+# names for tables and figures
 LABELS = {
-    "shaper0": "S0: No shaping (Base)",
-    "shaper1": "S1: Constant-rate (CR)",
-    "shaper2": "S2: NetShaper (global \u0394W)",
-    "shaper3": "S3: Adaptive per-class \u0394W (ours)",
+    "shaper_none": "S0: No shaping (Base)",
+    "shaper_const_rate": "S1: Constant-rate (CR)",
+    "shaper_dp_global": "S2: NetShaper (global \u0394W)",
+    "shaper_dp_per_class": "S3: Adaptive per-class \u0394W (ours)",
 }
 
+# Helper func
+def calculate_costs(shaped_set: list[dict]) -> dict:
+    # TODO: write func desc and detail the calcs
+    total_orig = 0  # sum of pre shaping bytes 
+    total_dummy = 0  # sum of dummy bytes
+    total_dropped = 0  # sum ofbytes dropped by the w window TTL
+    total_delay = 0.0  # sum of per trace mean delays(for the mean)
+    num_traces = 0  # trace count
+
+    for trace in shaped_set:
+        total_orig += trace["orig_bytes"]
+        total_dummy += trace["dummy_bytes"]
+        total_dropped += trace["dropped_bytes"]
+        total_delay += trace["delay_ms"]
+        num_traces += 1
+
+    # sanity check: avoiding calcs on an empty set
+    if total_orig == 0 or num_traces == 0:
+        return {"bw_overhead_x": 0.0, "mean_delay_ms": 0.0, "dropped_frac": 0.0}
+    # else
+    return {"bw_overhead_x": total_dummy / total_orig,
+            "mean_delay_ms": total_delay / num_traces,
+            "dropped_frac": total_dropped / total_orig}
 
 def main():
     # Load everything run_experiment.py produced
     data = json.loads(SHAPED_PATH.read_text(encoding="utf-8"))
 
     rows = []
-    for name in SHAPER_LEVELS:
-        shaped_set = data["runs"][name]
-        # --- privacy: train+test the adversary on this shaper's output ---
+    for type_shaper in SHAPER_LEVELS:
+        shaped_set = data["runs"][type_shaper]
+
+        # privacy: train+test the adversary on this shaper's output
         acc = attack_accuracy(shaped_set)
-        # --- costs ---
-        total_orig = sum(r["orig_bytes"] for r in shaped_set)
-        bw_overhead = sum(r["dummy_bytes"] for r in shaped_set) / total_orig
-        mean_delay = float(np.mean([r["delay_ms"] for r in shaped_set]))
-        drop_frac = sum(r["dropped_bytes"] for r in shaped_set) / total_orig
-        rows.append({"shaper": name, "attack_accuracy": round(acc, 3),
-                     "bw_overhead_x": round(bw_overhead, 2),
-                     "mean_delay_ms": round(mean_delay, 1),
-                     "dropped_frac": round(drop_frac, 4)})
+
+        # costs 
+        costs = calculate_costs(shaped_set)
+
+        # add shaper's costs 
+        rows.append({"shaper": type_shaper, "attack_accuracy": round(acc, 3),
+                     "bw_overhead_x": round(costs["bw_overhead_x"], 2),
+                     "mean_delay_ms": round(costs["mean_delay_ms"], 1),
+                     "dropped_frac": round(costs["dropped_frac"], 4)})
 
     df = pd.DataFrame(rows)
-    print("\n=== Summary (chance accuracy = 0.20) ===")
+    print("\n=== Summary (chance accuracy = 0.20) ===") #TODO what does chance accuracy means
     print(df.to_string(index=False))
     RESULTS_DIR.mkdir(exist_ok=True)
     df.to_csv(METRICS_PATH, index=False)
@@ -96,9 +119,9 @@ def main():
 
     print(f"[evaluate] figures saved to {RESULTS_DIR}/")
 
-    # The claim shaper3 must support, printed explicitly:
-    s2 = df[df.shaper == "shaper2"].iloc[0]
-    s3 = df[df.shaper == "shaper3"].iloc[0]
+    # The claim shaper_dp_global must support, printed explicitly:
+    s2 = df[df.shaper == "shaper_const_rate"].iloc[0]
+    s3 = df[df.shaper == "shaper_dp_global"].iloc[0]
     if s3.bw_overhead_x < s2.bw_overhead_x:
         print(f"\n[evaluate] EXTENSION RESULT: adaptive shaping cut bandwidth "
               f"overhead {s2.bw_overhead_x:.1f}x -> {s3.bw_overhead_x:.1f}x "

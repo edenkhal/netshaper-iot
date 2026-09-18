@@ -1,5 +1,5 @@
 """
-shaper1_constant.py -- Shaper 1: constant-rate shaping (the paper's CR baseline).
+shaper_const_rate.py: constant-rate shaping (the paper's CR baseline).
 
 Send a fixed number of bytes every bin, forever, regardless of real traffic.
 The paper: "Constant shaping involves sending fixed-sized packets at a
