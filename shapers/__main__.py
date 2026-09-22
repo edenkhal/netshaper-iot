@@ -1,7 +1,7 @@
 """
 __main__.py -- entry point of:  python -m shapers --smoke-test
 
-Runs all four shapers on one tiny trace and prints the outputs, so you can
+Runs every shaper on one tiny trace and prints the outputs, so you can
 verify in seconds that nothing crashes and shaping visibly changes the trace.
 """
 
@@ -13,7 +13,8 @@ if "--smoke-test" in sys.argv:
     demo_bins = [100, 100, 50000, 50000, 50000, 100, 100, 100, 100, 100]
     # Minimal dataset_stats a shaper needs (normally computed by run_experiment)
     stats = {"peak_bin": 60000, "delta_w_global": 200000,
-             "delta_w_per_class": {"demo": 150000}}
+             "delta_w_per_class": {"demo": 150000},
+             "delta_w_per_tier": {"demo": 150000}}   # "demo" is unmapped -> its own tier
     for name, fn in SHAPERS.items():
         out = fn(demo_bins, label="demo", dataset_stats=stats)
         print(f"--- {name} ---")

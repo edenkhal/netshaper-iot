@@ -18,9 +18,10 @@ shaping parameters are public in NetShaper's threat model ("[the adversary]
 may also have knowledge about NetShaper, including its shaping strategy and
 privacy configurations" - Sec 2.3). Per-class parameters therefore reveal
 the DEVICE CLASS by construction. The DP guarantee protects WHAT the device
-does (which event, when) WITHIN its class. This is a deliberate,
-quantifiable trade - the same kind the paper itself makes when it declares
-"the number of flows is public" (Sec 5). Our evaluation measures exactly
+does (which event, when) WITHIN its class. Revealing the class costs nothing
+NetShaper itself protects: device identity is out of scope for the mechanism
+by design, the same kind of non-goal the paper declares when it states "the
+number of flows is public" (Sec 5). Our evaluation measures exactly
 this: within-class event indistinguishability at a fraction of the cost.
 """
 

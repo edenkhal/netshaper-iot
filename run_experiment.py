@@ -4,7 +4,7 @@ run_experiment.py: turns raw traces into shaped traces and computes the DP param
 Pipeline:
   1. Load the trace dataset.
   2. Compute dataset_stats: the constant rate for CR, and the sensitivities
-     Delta_W (global and per-class) for the DP shapers -- estimated as the
+     Delta_W (global, per-class and per-tier) for the DP shapers -- estimated as the
      99th percentile of pairwise L1 window distances, the same recipe the
      paper uses ("Delta_T = 2.5MB, which covers 99th %ile of the distances
      in our dataset" -- their Sec 5.1 and Appendix B).
@@ -19,6 +19,7 @@ import numpy as np                 # window-distance computation
 from config import (TRACES_PATH, RESULTS_DIR, SHAPED_PATH, SHAPER_LEVELS,
                     T_BINS, W_INTERVALS, SEED)
 from shapers import SHAPERS
+from shapers.shaper4_dp_tiers import tier_of   # device -> tier map for shaper4
 
 _rng = random.Random(SEED + 1)     # praivate random generator - independant from the one that made the traces
 # TODO if changing into real data so maybe the line above needs to be changed
@@ -74,11 +75,22 @@ def main():
                               num_pairs=400)
         for lab in labels
     }
+    # Per-tier Delta_W: same recipe over the pooled traces of each tier (shaper4).
+    # Computed after the others so their Delta_W draws from _rng stay unchanged.
+    tiers = sorted({tier_of(lab) for lab in labels})
+    delta_w_per_tier = {
+        tier: estimate_delta_w([trace for trace in dataset if tier_of(trace["label"]) == tier],
+                               num_pairs=400)
+        for tier in tiers
+    }
     stats = {"peak_bin": peak_bin, "delta_w_global": delta_w_global,
-             "delta_w_per_class": delta_w_per_class}
+             "delta_w_per_class": delta_w_per_class, "delta_w_per_tier": delta_w_per_tier}
     print(f"[run] peak_bin={peak_bin}B  DeltaW_global={delta_w_global:,.0f}B")
     for lab in labels:                        # show the whole point of shaper3:
         print(f"[run]   DeltaW[{lab}] = {delta_w_per_class[lab]:,.0f}B")
+    for tier in tiers:                        # and the shared value per tier (shaper4)
+        members = [lab for lab in labels if tier_of(lab) == tier]
+        print(f"[run]   DeltaW[tier {tier}] = {delta_w_per_tier[tier]:,.0f}B  {members}")
 
     # ---- shape everything ----
     out = {"stats": stats, "runs": {}}
@@ -88,7 +100,11 @@ def main():
             shaped = SHAPERS[shaper_name](trace["bins"], trace["label"], stats)
             # Keep the label + everything the evaluation needs
             shaped_set.append({"label": trace["label"],
-                               "orig_bytes": sum(trace["bins"]), **shaped})
+                               "orig_bytes": sum(trace["bins"]),
+                                # carry source_pcap through for real data so the
+                                # attacker can split by capture (absent for synthetic)
+                                "source_pcap": trace.get("source_pcap"),
+                               **shaped})
         out["runs"][shaper_name] = shaped_set
         # Progress line with the headline overheads for a quick sanity read
         total_dummy = sum(r["dummy_bytes"] for r in shaped_set)

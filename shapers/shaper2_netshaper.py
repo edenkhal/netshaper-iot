@@ -47,14 +47,16 @@ def gaussian_sigma(delta_w: float, epsilon_t: float = EPSILON_T,
     return math.sqrt(2 * (delta_w ** 2) * math.log(1.25 / delta_t)) / epsilon_t
 
 
-def dp_shape_trace(bins: list[int], delta_w: float) -> dict:
+def dp_shape_trace(bins: list[int], delta_w: float, epsilon_t: float = EPSILON_T) -> dict:
     """
-    Core NetShaper simulation over one trace. Shared by shaper2 (global
-    Delta_W) and shaper3 (per-class Delta_W) -- only the sensitivity differs.
+    Core NetShaper simulation over one trace. Shared by all DP shapers:
+    shaper2 (global Delta_W), shaper3 (per-class Delta_W) and shaper4
+    (per-tier Delta_W) -- only the sensitivity differs. epsilon_t stays
+    available so a shaper can spend a different per-query budget.
 
     Returns the same dict contract as every shaper.
     """
-    sigma = gaussian_sigma(delta_w)           # noise scale for this Delta_W
+    sigma = gaussian_sigma(delta_w, epsilon_t)   # noise scale for this Delta_W and epsilon
     w_bins = W_INTERVALS * T_BINS             # the TTL window W, in bins
 
     queue = []                                # FIFO of (arrival_bin, nbytes)
@@ -116,7 +118,7 @@ def dp_shape_trace(bins: list[int], delta_w: float) -> dict:
         "dummy_bytes": int(dummy_total),
         "delay_ms": mean_delay_bins * BIN_MS,
         "dropped_bytes": int(dropped_total),
-        "epsilon_note": (f"({EPSILON_T},{DELTA_T})-DP per query, N={n_queries} "
+        "epsilon_note": (f"({epsilon_t},{DELTA_T})-DP per query, N={n_queries} "
                          f"queries, sigma={sigma:.0f}B, DeltaW={delta_w:.0f}B"),
     }
 

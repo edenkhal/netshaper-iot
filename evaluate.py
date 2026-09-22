@@ -2,8 +2,11 @@
 # evaluate.py           //TODO: REMOVE(STEP C)                                #
 #                                                                             #
 # For each shaper:                                                            #
-# privacy  = attack accuracy of a classifier trained on that shaper's output  #
-#            (lower = better; chance = 1/#classes = 0.20 here)                #
+# device ID = attack accuracy of a classifier predicting WHICH DEVICE a       #
+#             trace came from (lower = better; chance = 0.20 here). This is   #
+#             NOT NetShaper's own goal -- its threat model assumes the        #
+#             device is already identifiable. See evaluate_actions.py for     #
+#             the metric it does promise: which ACTION a known device did.    #
 # costs    = bandwidth overhead (dummy bytes / original bytes),               #
 #            mean latency (ms), dropped bytes (TTL flushes)                   #
 #                                                                             #
@@ -29,6 +32,7 @@ LABELS = {
     "shaper_const_rate": "S1: Constant-rate (CR)",
     "shaper_dp_global": "S2: NetShaper (global \u0394W)",
     "shaper_dp_per_class": "S3: Adaptive per-class \u0394W (ours)",
+    "shaper_dp_tiers": "S4: Tiered \u0394W (ours)",
 }
 
 # Helper func
@@ -89,7 +93,8 @@ def main():
     ax.bar(names, df["attack_accuracy"], color="#c0392b")
     ax.axhline(0.20, ls="--", c="gray", label="chance (5 classes)")
     ax.set_ylabel("Attack accuracy"); ax.set_ylim(0, 1.05)
-    ax.set_title("Privacy: event-classification accuracy on shaped traffic")
+    ax.set_title("Device identification on shaped traffic "
+                 "(beyond NetShaper's own scope)")
     ax.legend(); plt.xticks(rotation=12); plt.tight_layout()
     fig.savefig(RESULTS_DIR / "attack_accuracy.png", dpi=150)
 

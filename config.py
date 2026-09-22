@@ -15,7 +15,8 @@ BASE_DIR = Path(__file__).parent
 TRACES_PATH = BASE_DIR / "traces.json"          # the synthetic IoT trace dataset
 RESULTS_DIR = BASE_DIR / "results"
 SHAPED_PATH = RESULTS_DIR / "shaped.json"       # shaped traces + overhead metrics
-METRICS_PATH = RESULTS_DIR / "metrics.csv"      # summary table
+METRICS_PATH = RESULTS_DIR / "metrics.csv"      # summary table (device identification)
+ACTION_METRICS_PATH = RESULTS_DIR / "action_metrics.csv"   # per-device action table
 
 #################################### Time model ####################################
 BIN_MS = 100          # one bin = 100 ms of traffic
@@ -37,6 +38,15 @@ DELTA_T = 1e-6
 N_TRACES_PER_EVENT = 40   # traces per device-event class (5 classes -> 200 traces)
 SEED = 42                 # global seed: the experiment must be reproducible
 
+#################################### Action-identification evaluation (Step D) ####################################
+# The second privacy metric: the device is public, the secret is WHICH ACTION it
+# performed (see DP_ANALYSIS.md Sec 6). Real data only -- it needs source_pcap.
+ACTION_MIN_CAPTURES = 10  # drop actions with fewer captures (many have only 3)
+N_EVAL_SPLITS = 10        # capture splits averaged by the action evaluation
+
 #################################### Shaper order in the experiment ####################################
 # Must match the keys of the SHAPERS dict (shapers/__init__.py)
-SHAPER_LEVELS = ["shaper_none", "shaper_const_rate", "shaper_dp_global", "shaper_dp_per_class"]
+# New shapers go at the end: the DP shapers share one noise RNG, so appending
+# keeps the earlier shapers' noise draws (and results) unchanged
+SHAPER_LEVELS = ["shaper_none", "shaper_const_rate", "shaper_dp_global", "shaper_dp_per_class",
+                 "shaper_dp_tiers"]

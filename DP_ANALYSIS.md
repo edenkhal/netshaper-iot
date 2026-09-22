@@ -74,6 +74,46 @@ consequences, both quantifiable:
   flows is public" (Sec 5). We protect the event within the class and measure
   the cost saving that buys.
 
+### 6.1 The action-level neighboring definition (what Step D measures)
+
+Sections 2-4 define neighbors over *all* streams. Once the device class is
+public -- which shaper3 and shaper4 make it, by publishing a per-class or
+per-tier Delta_W -- the relation that matches what they still protect is
+restricted to one device d:
+
+    S ~_d S'  iff  device(S) = device(S') = d
+                   and  max_{windows} || S_{tw,W} - S'_{tw,W} ||_1  <=  Delta_d
+
+Two things follow, and both are already true of the code:
+
+- Delta_d is exactly what run_experiment.py estimates for shaper3: the 99th
+  percentile of pairwise distances taken *within* one device. So the sensitivity
+  the mechanism uses and the sensitivity this relation needs are the same value.
+- Under this relation the per-query guarantee is unchanged: (epsilon_T,
+  delta_T)-DP per release, composed over N releases as in Sec 5. What changes is
+  only the claim: two *actions of the same device* are indistinguishable, and
+  nothing is claimed about two different devices.
+
+evaluate_actions.py (Step D) measures this property empirically -- one
+classifier per device, predicting which action produced the trace -- while
+evaluate.py (Step C) measures device identification, which is outside
+NetShaper's threat model altogether: the paper's adversary is assumed to
+already know which device is transmitting, from its IP address, its
+protocol, or the mere presence of traffic. Reporting both keeps the
+comparison honest. Step D is the mechanism's actual promise, and every
+shaper -- including the cheap shaper3 -- delivers it. Step C shows what our
+per-class and per-tier Delta_W additionally reveal beyond the paper's own
+scope, which is not a shortfall against anything NetShaper promised.
+
+Framing note: hiding device identity is a NON-GOAL of NetShaper's threat
+model. The adversary is assumed to know already which device is transmitting
+-- from its IP address, its communication protocol, or simply the presence of
+traffic -- so concealing that was never what the mechanism set out to do.
+What it protects is the specific action or content a KNOWN device is
+executing: whether the camera is streaming video because it detected motion
+or sitting in standby, whether the vacuum is uploading a floor map, cleaning,
+or reporting battery. That is exactly the relation S ~_d S' above.
+
 ## 7. The headline caveat the paper itself raises
 
 There is a large gap between theoretical DP and the parameters needed to

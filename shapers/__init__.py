@@ -1,5 +1,5 @@
 """
-shapers -- the package of four traffic-shaping strategies.
+shapers -- the package of five traffic-shaping strategies.
 
 Every shaper is a function with the exact same signature:
     shape(bins: list[int], label: str, dataset_stats: dict) -> dict
@@ -23,6 +23,7 @@ Grounding map (Sabzi et al., USENIX Security 2024):
   shaper1 = constant-rate shaping (their CR baseline, "most secure" but costly)
   shaper2 = NetShaper's DP shaping, faithfully simulated (their Sec 3)
   shaper3 = OUR EXTENSION: per-device-class DP parameters (not in the paper)
+  shaper4 = OUR EXTENSION: per-tier DP parameters, devices grouped into tiers
 
 Standalone check:  python -m shapers --smoke-test
 """
@@ -31,11 +32,13 @@ from .shaper0_none import shape as shaper0_none        # no shaping (Base)
 from .shaper1_const_rate import shape as shaper1_const_rate   # constant rate (CR)
 from .shaper2_netshaper import shape as shaper2_netshaper   # NetShaper DP shaping (global DP)
 from .shaper3_adaptive import shape as shaper3_dp_per_class    # our per class adaptive DP
+from .shaper4_dp_tiers import shape as shaper4_dp_tiers    # our per tier DP
 
 # shapers registry: run_experiment.py iterates over this
 SHAPERS = {
     "shaper_none": shaper0_none,
-    "shaper_const_rate1": shaper1_const_rate ,
+    "shaper_const_rate": shaper1_const_rate,
     "shaper_dp_global": shaper2_netshaper,
     "shaper_dp_per_class": shaper3_dp_per_class,
+    "shaper_dp_tiers": shaper4_dp_tiers,
 }
